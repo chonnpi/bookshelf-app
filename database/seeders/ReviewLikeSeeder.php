@@ -20,13 +20,16 @@ class ReviewLikeSeeder extends Seeder
             if ($randomCount === 0) {
                 continue;
             }
+
             $eligibleUserIds = $userIds->reject(function ($id) use ($review) {
                 return $id === $review->user_id;
             });
+
             $finalCount = min($randomCount, $eligibleUserIds->count());
+
             if ($finalCount > 0) {
                 $randomUserIds = $eligibleUserIds->random($finalCount);
-                $review->users()->syncWithoutDetaching($randomUserIds);
+                $review->likeUsers()->syncWithoutDetaching($randomUserIds);
             }
         }
     }
