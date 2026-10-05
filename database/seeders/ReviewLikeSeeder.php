@@ -29,7 +29,7 @@ class ReviewLikeSeeder extends Seeder
 
             if ($finalCount > 0) {
                 $randomUserIds = $eligibleUserIds->random($finalCount);
-                $review->likeUsers()->syncWithoutDetaching($randomUserIds);
+                $review->likedByUsers()->syncWithoutDetaching($randomUserIds);
             }
         }
     }

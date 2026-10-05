@@ -31,7 +31,7 @@ class ReviewSeeder extends Seeder
                     'user_id' => $userId,
                     'book_id' => $book->id,
                     'rating' => rand(3, 5),
-                    'comment' => fake()->realText(100),
+                    'comment' => fake('ja_JP')->realText(100),
                 ]);
                 $reviewCounter++;
             }
