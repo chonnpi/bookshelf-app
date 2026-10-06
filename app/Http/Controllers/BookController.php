@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\BookRequest;
 use App\Models\Book;
 use App\Models\Genre;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 
@@ -83,14 +84,16 @@ class BookController extends Controller
      */
     public function edit(Book $book)
     {
-        if (auth()->user()->cannot('update', $book)) {
+        try {
+            $this->authorize('update', $book);
+            $genres = Genre::all();
+
+            return view('books.edit', compact('book', 'genres'));
+        } catch (AuthorizationException $e) {
             return redirect()
                 ->route('books.index')
-                ->with('error', '自分が登録した書籍以外は編集できません。');
+                ->with('error', '自分が登録した書籍以外は編集できません');
         }
-        $genres = Genre::all();
-
-        return view('books.edit', compact('book', 'genres'));
     }
 
     /**
@@ -98,23 +101,20 @@ class BookController extends Controller
      */
     public function update(BookRequest $request, Book $book)
     {
-        if (auth()->user()->cannot('update', $book)) {
-            return redirect()
-                ->route('books.index')
-                ->with('error', '自分が登録した書籍以外は更新できません。');
-        }
-        $validated = $request->validated();
-
-        $bookData = Arr::only($validated, [
-            'title',
-            'author',
-            'isbn',
-            'published_date',
-            'description',
-            'image_url',
-        ]);
-
         try {
+            $this->authorize('update', $book);
+
+            $validated = $request->validated();
+
+            $bookData = Arr::only($validated, [
+                'title',
+                'author',
+                'isbn',
+                'published_date',
+                'description',
+                'image_url',
+            ]);
+
             DB::transaction(function () use ($book, $bookData, $validated) {
 
                 $book->update($bookData);
@@ -123,6 +123,10 @@ class BookController extends Controller
             });
 
             return redirect()->route('books.show', $book)->with('success', '書籍を更新しました！');
+        } catch (AuthorizationException $e) {
+            return redirect()
+                ->route('books.index')
+                ->with('error', '自分が登録した書籍以外は更新できません。');
         } catch (\Exception $e) {
             return redirect()
                 ->back()
@@ -136,19 +140,15 @@ class BookController extends Controller
      */
     public function destroy(Book $book)
     {
-        if (auth()->user()->cannot('delete', $book)) {
+        try {
+            $this->authorize('delete', $book);
+            $book->delete();
+
+            return redirect()->route('books.index')->with('success', '書籍を削除しました！');
+        } catch (AuthorizationException $e) {
             return redirect()
                 ->route('books.index')
                 ->with('error', '自分が登録した書籍以外は削除できません');
-        }
-
-        try {
-            DB::transaction(function () use ($book) {
-
-                $book->delete();
-            });
-
-            return redirect()->route('books.index')->with('success', '書籍を削除しました！');
         } catch (\Exception $e) {
             return redirect()
                 ->back()
