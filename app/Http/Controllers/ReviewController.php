@@ -30,6 +30,21 @@ class ReviewController extends Controller
         }
     }
 
+    public function like(Review $review)
+    {
+        $user = auth()->user();
+
+        if ($user->likedReviews()->where('review_id', $review->id)->exists()) {
+            $user->likedReviews()->detach($review->id);
+            $message = 'いいねを取り消しました';
+        } else {
+            $user->likedReviews()->attach($review->id);
+            $message = 'レビューにいいねしました';
+        }
+
+        return redirect()->back()->with('success', $message);
+    }
+
     public function edit(Review $review)
     {
         try {
