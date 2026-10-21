@@ -3,6 +3,8 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -23,8 +25,30 @@ class Handler extends ExceptionHandler
      */
     public function register(): void
     {
-        $this->reportable(function (Throwable $e) {
-            //
+        $this->renderable(function (Throwable $e, $request) {
+            if ($request->is('api/*')) {
+
+                // 1. バリデーションエラー
+                if ($e instanceof ValidationException) {
+                    return response()->json([
+                        'message' => '入力内容にエラーがあります。',
+                        'errors' => $e->errors(),
+                    ], 422);
+                }
+
+                // 2. 404モデル不在エラー
+                if ($e instanceof NotFoundHttpException) {
+                    return response()->json([
+                        'message' => '指定されたリソースが見つかりません。'
+                    ], 404);
+                }
+
+                // 3. その他すべてのエラー
+                return response()->json([
+                    'message' => 'サーバーエラーが発生しました。',
+                    'error' => config('app.debug') ? $e->getMessage() : null,
+                ], 500);
+            }
         });
     }
 }
