@@ -39,7 +39,7 @@ class Handler extends ExceptionHandler
                 // 2. 404モデル不在エラー
                 if ($e instanceof NotFoundHttpException) {
                     return response()->json([
-                        'message' => '指定されたリソースが見つかりません。'
+                        'message' => '指定されたリソースが見つかりません。',
                     ], 404);
                 }
 
