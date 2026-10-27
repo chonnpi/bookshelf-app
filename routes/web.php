@@ -39,13 +39,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/genres/{genre}/edit', [GenreController::class, 'edit'])->name('genres.edit');
     Route::put('/genres/{genre}', [GenreController::class, 'update'])->name('genres.update');
     Route::delete('/genres/{genre}', [GenreController::class, 'destroy'])->name('genres.destroy');
-
 });
 
 Route::get('/', [BookController::class, 'index'])->name('books.index');
 Route::get('/books/{book}', [BookController::class, 'show'])->name('books.show');
 Route::get('/ranking', [RankingController::class, 'index'])->name('ranking.index');
-
-Route::resource('genres', GenreController::class);
-
-Route::post('/reviews/{review}/like', [ReviewController::class, 'like'])->name('reviews.like');

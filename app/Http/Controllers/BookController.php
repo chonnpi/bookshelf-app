@@ -126,7 +126,7 @@ class BookController extends Controller
         } catch (AuthorizationException $e) {
             return redirect()
                 ->route('books.index')
-                ->with('error', '自分が登録した書籍以外は更新できません。');
+                ->with('error', '自分が登録した書籍以外は更新できません');
         } catch (\Exception $e) {
             return redirect()
                 ->back()

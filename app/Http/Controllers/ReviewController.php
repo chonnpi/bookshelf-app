@@ -56,7 +56,7 @@ class ReviewController extends Controller
         } catch (AuthorizationException $e) {
             return redirect()
                 ->route('books.show', $review->book_id)
-                ->with('error', '自分が投稿したレビュー以外は編集できません。');
+                ->with('error', '自分が投稿したレビュー以外は編集できません');
         }
     }
 
@@ -78,7 +78,7 @@ class ReviewController extends Controller
         } catch (AuthorizationException $e) {
             return redirect()
                 ->route('books.show', $review->book_id)
-                ->with('error', '自分が投稿したレビュー以外は更新できません。');
+                ->with('error', '自分が投稿したレビュー以外は更新できません');
         } catch (\Exception $e) {
             return redirect()
                 ->back()
