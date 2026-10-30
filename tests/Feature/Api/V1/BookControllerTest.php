@@ -6,6 +6,8 @@ use App\Models\Book;
 use App\Models\Genre;
 use App\Models\Review;
 use App\Models\User;
+
+use Laravel\Sanctum\Sanctum;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -73,7 +75,7 @@ class BookControllerTest extends TestCase
 
     public function test_index_validation_fails_with_invalid_params(): void
     {
-        $response = $this->getJson('/api/v1/books?'.http_build_query([
+        $response = $this->getJson('/api/v1/books?' . http_build_query([
             'keyword' => str_repeat('a', 101),
             'genre_id' => 99999,
             'page' => 0,
@@ -84,11 +86,13 @@ class BookControllerTest extends TestCase
         $response->assertJsonValidationErrors(['keyword', 'genre_id', 'page', 'per_page']);
     }
 
-    public function test_store_saves_book_with_genres(): void
+    public function test_store_saves_book_with_genres_successfully_when_authenticated(): void
     {
         $user = User::factory()->create();
         $genre1 = Genre::factory()->create();
         $genre2 = Genre::factory()->create();
+
+        Sanctum::actingAs($user);
 
         $bookData = [
             'title' => '新しい技術書',
@@ -97,7 +101,6 @@ class BookControllerTest extends TestCase
             'published_date' => '2026/10/27',
             'description' => '本の詳細です。',
             'genres' => [$genre1->id, $genre2->id],
-            'user_id' => $user->id,
         ];
 
         $response = $this->postJson('/api/v1/books', $bookData);
@@ -107,6 +110,7 @@ class BookControllerTest extends TestCase
         $this->assertDatabaseHas('books', [
             'title' => '新しい技術書',
             'author' => '著者A',
+            'user_id' => $user->id,
         ]);
 
         $book = Book::where('title', '新しい技術書')->first();
@@ -117,9 +121,20 @@ class BookControllerTest extends TestCase
         $response->assertJsonCount(2, 'data.genres');
     }
 
+    public function test_store_fails_when_unauthenticated(): void
+    {
+        $response = $this->postJson('/api/v1/books', [
+            'title' => '未認証本',
+        ]);
+
+        $response->assertStatus(401)
+            ->assertJson(['message' => 'ログイン（認証）が必要です']);
+    }
+
     public function test_store_validation_fails_when_required_fields_are_missing(): void
     {
         $user = User::factory()->create();
+        Sanctum::actingAs($user);
 
         $response = $this->postJson('/api/v1/books', [
             'title' => '',
@@ -127,7 +142,6 @@ class BookControllerTest extends TestCase
             'isbn' => 'invalid-isbn',
             'published_date' => '2026-10-27',
             'genres' => [],
-            'user_id' => 99999,
         ]);
 
         $response->assertUnprocessable();
@@ -137,7 +151,6 @@ class BookControllerTest extends TestCase
             'isbn',
             'published_date',
             'genres',
-            'user_id',
         ]);
     }
 
@@ -146,20 +159,21 @@ class BookControllerTest extends TestCase
         $user = User::factory()->create();
         $genre = Genre::factory()->create();
 
+        Sanctum::actingAs($user);
+
         Book::factory()->create(['isbn' => '9784000000000']);
 
         $bookData = [
             'title' => '重複テスト本',
             'author' => '著者B',
-            'isbn' => '9784000000000', // 重複
+            'isbn' => '9784000000000',
             'published_date' => '2026/10/27',
             'genres' => [$genre->id],
-            'user_id' => $user->id,
         ];
 
         $response = $this->postJson('/api/v1/books', $bookData);
 
-        $response->assertUnprocessable(); // 422
+        $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['isbn']);
     }
 
@@ -188,14 +202,16 @@ class BookControllerTest extends TestCase
         $response->assertJsonPath('data.reviews.0.comment', '最高でした');
     }
 
-    public function test_update_modifies_book_and_syncs_genres(): void
+    public function test_update_modifies_book_successfully_when_owner(): void
     {
         $user = User::factory()->create();
         $genreOld = Genre::factory()->create();
         $genreNew = Genre::factory()->create();
 
-        $book = Book::factory()->create(['title' => '古いタイトル', 'isbn' => '9784111111111']);
+        $book = Book::factory()->create(['title' => '古いタイトル', 'isbn' => '9784111111111', 'user_id' => $user->id]);
         $book->genres()->attach($genreOld->id);
+
+        Sanctum::actingAs($user);
 
         $updateData = [
             'title' => '新しいタイトル',
@@ -203,7 +219,6 @@ class BookControllerTest extends TestCase
             'isbn' => '9784111111111',
             'published_date' => '2026/10/27',
             'genres' => [$genreNew->id],
-            'user_id' => $user->id,
         ];
 
         $response = $this->putJson("/api/v1/books/{$book->id}", $updateData);
@@ -224,32 +239,74 @@ class BookControllerTest extends TestCase
         $user = User::factory()->create();
         $genre = Genre::factory()->create();
 
-        $otherBook = Book::factory()->create(['isbn' => '9784111111111']);
-        $myBook = Book::factory()->create(['isbn' => '9784222222222']);
+        Sanctum::actingAs($user);
+
+        Book::factory()->create(['isbn' => '9784111111111']);
+        $myBook = Book::factory()->create(['isbn' => '9784222222222', 'user_id' => $user->id]);
 
         $updateData = [
             'title' => 'タイトル更新',
             'author' => '著者',
-            'isbn' => '9784111111111', // 他の本のISBNと衝突
+            'isbn' => '9784111111111',
             'published_date' => '2026/10/27',
             'genres' => [$genre->id],
-            'user_id' => $user->id,
         ];
 
         $response = $this->putJson("/api/v1/books/{$myBook->id}", $updateData);
 
-        $response->assertUnprocessable(); // 422
+        $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['isbn']);
     }
 
-    public function test_destroy_deletes_book_successfully(): void
+    public function test_update_fails_when_not_owner(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $genre = Genre::factory()->create();
+
+        $book = Book::factory()->create(['user_id' => $owner->id]);
+
+        Sanctum::actingAs($otherUser);
+
+        $response = $this->putJson("/api/v1/books/{$book->id}", [
+            'title' => '乗っ取りタイトル',
+            'author' => '偽著者',
+            'isbn' => '9784222222222',
+            'published_date' => '2026/10/27',
+            'genres' => [$genre->id],
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJson(['message' => 'この操作を行う権限がありません']);
+    }
+
+
+    public function test_destroy_deletes_book_successfully__when_owner(): void
     {
         $user = User::factory()->create();
-        $book = Book::factory()->create();
+        $book = Book::factory()->create(['user_id' => $user->id]);
+
+        Sanctum::actingAs($user);
 
         $response = $this->deleteJson("/api/v1/books/{$book->id}");
 
         $response->assertStatus(204);
-        $this->assertDatabaseMissing('books', ['id' => $book->id]);
+        $this->assertModelMissing($book);
+    }
+
+    public function test_destroy_fails_when_not_owner(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $book = Book::factory()->create(['user_id' => $owner->id]);
+
+        Sanctum::actingAs($otherUser);
+
+        $response = $this->deleteJson("/api/v1/books/{$book->id}");
+
+        $response->assertStatus(403)
+            ->assertJson(['message' => 'この操作を行う権限がありません']);
     }
 }
+

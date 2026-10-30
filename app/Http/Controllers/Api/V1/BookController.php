@@ -52,8 +52,11 @@ class BookController extends Controller
     {
         $validated = $request->validated();
 
-        $book = DB::transaction(function () use ($validated) {
-            $book = Book::create(Arr::except($validated, ['genres']));
+        $book = DB::transaction(function () use ($validated, $request) {
+            $insertData = Arr::except($validated, ['genres']);
+            $insertData['user_id'] = $request->user()->id;
+
+            $book = Book::create($insertData);
 
             $book->genres()->attach($validated['genres']);
 
@@ -80,6 +83,8 @@ class BookController extends Controller
      */
     public function update(UpdateBookRequest $request, Book $book): BookResource
     {
+        $this->authorize('update', $book);
+
         $validated = $request->validated();
 
         $book = DB::transaction(function () use ($validated, $book) {
@@ -98,6 +103,8 @@ class BookController extends Controller
      */
     public function destroy(Book $book): JsonResponse
     {
+        $this->authorize('delete', $book);
+
         $book->delete();
 
         return response()->json(null, 204);
