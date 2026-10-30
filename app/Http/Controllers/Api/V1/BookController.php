@@ -10,13 +10,15 @@ use App\Http\Resources\BookResource;
 use App\Models\Book;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\JsonResponse;
 
 class BookController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index(IndexBookRequest $request)
+    public function index(IndexBookRequest $request): AnonymousResourceCollection
     {
         $query = Book::withCount('reviews')
             ->withAvg('reviews', 'rating')
@@ -25,8 +27,8 @@ class BookController extends Controller
         if ($request->filled('keyword')) {
             $keyword = $request->keyword;
             $query->where(function ($q) use ($keyword) {
-                $q->where('title', 'like', '%'.$keyword.'%')
-                    ->orWhere('author', 'like', '%'.$keyword.'%');
+                $q->where('title', 'like', '%' . $keyword . '%')
+                    ->orWhere('author', 'like', '%' . $keyword . '%');
             });
         }
 
@@ -46,7 +48,7 @@ class BookController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreBookRequest $request)
+    public function store(StoreBookRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
@@ -66,7 +68,7 @@ class BookController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Book $book)
+    public function show(Book $book): BookResource
     {
         $book->load(['genres', 'reviews.user']);
 
@@ -76,7 +78,7 @@ class BookController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateBookRequest $request, Book $book)
+    public function update(UpdateBookRequest $request, Book $book): BookResource
     {
         $validated = $request->validated();
 
@@ -94,7 +96,7 @@ class BookController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Book $book)
+    public function destroy(Book $book): JsonResponse
     {
         $book->delete();
 

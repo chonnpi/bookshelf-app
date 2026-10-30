@@ -6,11 +6,13 @@ use App\Http\Requests\ReviewRequest;
 use App\Models\Book;
 use App\Models\Review;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
+use Illuminate\View\View;
 
 class ReviewController extends Controller
 {
-    public function store(ReviewRequest $request, Book $book)
+    public function store(ReviewRequest $request, Book $book): RedirectResponse
     {
         $validated = $request->validated();
 
@@ -30,7 +32,7 @@ class ReviewController extends Controller
         }
     }
 
-    public function like(Review $review)
+    public function like(Review $review): RedirectResponse
     {
         $user = auth()->user();
 
@@ -45,7 +47,7 @@ class ReviewController extends Controller
         return redirect()->back()->with('success', $message);
     }
 
-    public function edit(Review $review)
+    public function edit(Review $review): View|RedirectResponse
     {
         try {
 
@@ -60,7 +62,7 @@ class ReviewController extends Controller
         }
     }
 
-    public function update(ReviewRequest $request, Review $review)
+    public function update(ReviewRequest $request, Review $review): RedirectResponse
     {
         try {
             $this->authorize('update', $review);
@@ -87,7 +89,7 @@ class ReviewController extends Controller
         }
     }
 
-    public function destroy(Review $review)
+    public function destroy(Review $review): RedirectResponse
     {
         try {
             $this->authorize('delete', $review);

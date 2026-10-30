@@ -6,6 +6,7 @@ use App\Models\Book;
 use App\Models\Review;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Arr;
 
 class ReviewSeeder extends Seeder
 {
@@ -17,23 +18,30 @@ class ReviewSeeder extends Seeder
         $users = User::all();
         $books = Book::all();
 
-        $distribution = [2, 3, 4, 2, 3, 4, 2, 3, 4, 2, 3];
+        $templates = [
+            5 => ['素晴らしい本でした！', '人生が変わりました。', '何度も読み返しています。'],
+            4 => ['とても参考になりました。', '読みやすくておすすめです。', '期待通りの内容でした。'],
+            3 => ['普通でした。', '可もなく不可もなく。', '期待したほどではなかった。'],
+            2 => ['少し期待外れでした。', '内容が薄い印象。', 'もう少し深掘りしてほしかった。'],
+            1 => ['残念ながら合いませんでした。', '期待と違いました。'],
+        ];
 
-        $reviewCounter = 0;
+        foreach ($books as $book) {
+            $reviewCount = rand(2, 4);
 
-        foreach ($books as $index => $book) {
-            $count = $distribution[$index];
+            $selectedUsers = $users->random($reviewCount);
 
-            for ($i = 0; $i < $count; $i++) {
-                $userId = $users->get($reviewCounter % $users->count())->id;
+            foreach ($selectedUsers as $user) {
+                $rating = rand(1, 5);
+
+                $comment = Arr::random($templates[$rating]);
 
                 Review::factory()->create([
-                    'user_id' => $userId,
+                    'user_id' => $user->id,
                     'book_id' => $book->id,
-                    'rating' => rand(3, 5),
-                    'comment' => fake('ja_JP')->realText(100),
+                    'rating' => $rating,
+                    'comment' => $comment,
                 ]);
-                $reviewCounter++;
             }
         }
     }

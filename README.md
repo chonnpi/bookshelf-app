@@ -27,6 +27,14 @@ erDiagram
     users ||--|{ favorites : "中間テーブル"
     books ||--|{ favorites : "中間テーブル"
 
+    応用
+
+    users ||--o{ reading_plans : "1対多 (計画作成)"
+    books ||--o{ reading_plans : "1対多 (対象書籍)"
+
+    users ||--o{ notifications : "1対多 (通知受信)"
+    reading_plans ||--o| notifications : "1対1 (3日前リマインダー)"
+
 users {
         bigint_unsigned id PK
         varchar_255 name
