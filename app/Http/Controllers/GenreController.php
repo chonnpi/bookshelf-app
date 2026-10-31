@@ -7,7 +7,6 @@ use App\Models\Genre;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
-
 class GenreController extends Controller
 {
     /**

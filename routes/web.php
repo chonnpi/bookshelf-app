@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
     Route::get('/books/create', [BookController::class, 'create'])->name('books.create');
+    Route::get('/books/isbn/{isbn}', [BookController::class, 'fetchByIsbn']);
     Route::post('/books', [BookController::class, 'store'])->name('books.store');
     Route::get('/books/{book}/edit', [BookController::class, 'edit'])->name('books.edit');
     Route::put('/books/{book}', [BookController::class, 'update'])->name('books.update');
@@ -39,6 +40,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/genres/{genre}/edit', [GenreController::class, 'edit'])->name('genres.edit');
     Route::put('/genres/{genre}', [GenreController::class, 'update'])->name('genres.update');
     Route::delete('/genres/{genre}', [GenreController::class, 'destroy'])->name('genres.destroy');
+    Route::get('/reports', [MyReadingReportController::class, 'index'])->name('reports.index');
+    Route::get('/reading-plans/create', [ReadingPlanControler::class, 'index'])->name('reading-plans.index');
+    Route::get('/notifications', [NotificationControler::class, 'index'])->name('notifications.index');
 });
 
 Route::get('/', [BookController::class, 'index'])->name('books.index');

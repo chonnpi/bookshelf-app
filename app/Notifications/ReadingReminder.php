@@ -4,8 +4,6 @@ namespace App\Notifications;
 
 use App\Models\ReadingPlan;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class ReadingReminder extends Notification
@@ -21,7 +19,6 @@ class ReadingReminder extends Notification
     {
         $this->readingPlan = $readingPlan;
     }
-
 
     public function via(object $notifiable): array
     {

@@ -6,9 +6,8 @@ use App\Models\Book;
 use App\Models\Genre;
 use App\Models\Review;
 use App\Models\User;
-
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class BookControllerTest extends TestCase
@@ -75,7 +74,7 @@ class BookControllerTest extends TestCase
 
     public function test_index_validation_fails_with_invalid_params(): void
     {
-        $response = $this->getJson('/api/v1/books?' . http_build_query([
+        $response = $this->getJson('/api/v1/books?'.http_build_query([
             'keyword' => str_repeat('a', 101),
             'genre_id' => 99999,
             'page' => 0,
@@ -280,7 +279,6 @@ class BookControllerTest extends TestCase
             ->assertJson(['message' => 'この操作を行う権限がありません']);
     }
 
-
     public function test_destroy_deletes_book_successfully__when_owner(): void
     {
         $user = User::factory()->create();
@@ -309,4 +307,3 @@ class BookControllerTest extends TestCase
             ->assertJson(['message' => 'この操作を行う権限がありません']);
     }
 }
-

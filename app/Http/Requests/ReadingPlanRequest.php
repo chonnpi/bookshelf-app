@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,11 +19,11 @@ class ReadingPlanRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        //読書計画作成か編集かでルールを切り替える(storeRulesかupdateRules)
+        // 読書計画作成か編集かでルールを切り替える(storeRulesかupdateRules)
         if ($this->isMethod('post')) {
             return $this->storeRules();
         }

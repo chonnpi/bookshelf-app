@@ -31,20 +31,19 @@ class Handler extends ExceptionHandler
         $this->renderable(function (Throwable $e, $request) {
             if ($request->is('api/*')) {
 
-                //追加：未認証（Sanctumトークンエラー）のとき
+                // 追加：未認証（Sanctumトークンエラー）のとき
                 if ($e instanceof AuthenticationException) {
                     return response()->json([
-                        'message' => 'ログイン（認証）が必要です'
+                        'message' => 'ログイン（認証）が必要です',
                     ], 401);
                 }
 
-                //認可エラー（他人の本を編集・削除しようとしたとき）
+                // 認可エラー（他人の本を編集・削除しようとしたとき）
                 if ($e instanceof AccessDeniedHttpException || $e instanceof AuthorizationException) {
                     return response()->json([
-                        'message' => 'この操作を行う権限がありません'
+                        'message' => 'この操作を行う権限がありません',
                     ], 403);
                 }
-
 
                 // 1. バリデーションエラー
                 if ($e instanceof ValidationException) {

@@ -6,9 +6,12 @@ use App\Http\Requests\BookRequest;
 use App\Models\Book;
 use App\Models\Genre;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
 class BookController extends Controller
@@ -16,13 +19,53 @@ class BookController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $books = Book::with('genres')
-            ->latest()
-            ->paginate(10);
+        $query = Book::with('genres')
+            ->withAvg('reviews', 'rating');
 
-        return view('books.index', compact('books'));
+        if ($request->filled('keyword')) {
+            $keyword = $request->input('keyword');
+            $query->where(function ($q) use ($keyword) {
+                $q->where('title', 'like', '%'.$keyword.'%')
+                    ->orWhere('author', 'like', '%'.$keyword.'%');
+            });
+        }
+        if ($request->filled('genre')) {
+            $genreId = $request->input('genre');
+            $query->whereHas('genres', function ($q) use ($genreId) {
+                $q->where('genres.id', $genreId);
+            });
+        }
+
+        $sort = $request->input('sort', 'newest');
+
+        switch ($sort) {
+            case 'oldest':
+                $query->orderBy('created_at', 'asc');
+                break;
+
+            case 'title':
+                $query->orderBy('title', 'asc');
+                break;
+
+            case 'rating':
+
+                $query->orderByRaw('CASE WHEN reviews_avg_rating IS NULL THEN 1 ELSE 0 END')
+                    ->orderBy('reviews_avg_rating', 'desc');
+                break;
+
+            case 'newest':
+            default:
+                $query->orderBy('created_at', 'desc');
+                break;
+        }
+
+        $books = $query->paginate(10)->withQueryString();
+
+        $genres = Genre::all();
+
+        return view('books.index', compact('books', 'genres'));
     }
 
     /**
@@ -33,6 +76,65 @@ class BookController extends Controller
         $genres = Genre::all();
 
         return view('books.create', compact('genres'));
+    }
+
+    public function fetchByIsbn(string $isbn): JsonResponse
+    {
+        if (! preg_match('/^\d{13}$/', $isbn)) {
+            return response()->json([
+                'error' => '正しい13桁のISBNコードを入力してください。',
+            ], 400);
+        }
+        try {
+            $baseUrl = config('services.google.books_api_url');
+            $apiKey = config('services.google.books_api_key');
+            $safeIsbn = urlencode("isbn:{$isbn}");
+            $url = "{$baseUrl}/volumes?q={$safeIsbn}&key={$apiKey}";
+            $response = Http::get($url);
+            if ($response->failed()) {
+                return response()->json([
+                    'error' => 'Googleエラー('.$response->status().'): '.$response->body(),
+                ], 502);
+            }
+
+            $data = $response->json();
+
+            if (! isset($data['items']) || count($data['items']) === 0) {
+                return response()->json([
+                    'error' => '該当する書籍情報が見つかりませんでした。',
+                ], 404);
+            }
+
+            $volumeInfo = $data['items'][0]['volumeInfo'];
+            $publishedDate = $volumeInfo['publishedDate'] ?? '';
+            $formattedDate = '';
+
+            if (! empty($publishedDate)) {
+                $digits = preg_replace('/\D/', '', $publishedDate);
+                if (strlen($digits) === 8) {
+                    $year = substr($digits, 0, 4);
+                    $month = substr($digits, 4, 2);
+                    $day = substr($digits, 6, 2);
+
+                    if (checkdate((int) $month, (int) $day, (int) $year)) {
+                        $formattedDate = "{$year}-{$month}-{$day}";
+                    }
+                }
+            }
+
+            return response()->json([
+                'title' => $volumeInfo['title'] ?? '',
+                'author' => isset($volumeInfo['authors']) ? implode(', ', $volumeInfo['authors']) : '',
+                'description' => $volumeInfo['description'] ?? '',
+                'published_date' => $formattedDate,
+                'image_url' => $volumeInfo['imageLinks']['thumbnail'] ?? '',
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'サーバー内部でエラーが発生しました。時間をおいて再度お試しください。',
+            ], 500);
+        }
     }
 
     /**
@@ -57,7 +159,7 @@ class BookController extends Controller
             DB::transaction(function () use ($bookData, $validated) {
                 $book = Book::create($bookData);
 
-                if (!empty($validated['genres'])) {
+                if (! empty($validated['genres'])) {
                     $book->genres()->sync($validated['genres']);
                 }
             });

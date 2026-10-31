@@ -6,7 +6,6 @@ use App\Models\Book;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
-
 class FavoriteController extends Controller
 {
     public function toggle(Book $book): RedirectResponse

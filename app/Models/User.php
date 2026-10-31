@@ -69,5 +69,4 @@ class User extends Authenticatable
     {
         return $this->hasMany(ReadingPlan::class);
     }
-
 }

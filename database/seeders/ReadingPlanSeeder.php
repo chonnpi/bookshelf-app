@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use App\Models\ReadingPlan;
 use App\Models\Book;
+use App\Models\ReadingPlan;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
@@ -16,7 +15,6 @@ class ReadingPlanSeeder extends Seeder
     public function run(): void
     {
         $today = Carbon::today();
-
 
         $bookIds = Book::pluck('id')->toArray();
 
