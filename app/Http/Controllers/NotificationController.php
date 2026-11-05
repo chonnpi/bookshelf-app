@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class NotificationController extends Controller
 {
@@ -17,13 +17,13 @@ class NotificationController extends Controller
 
     public function read(Request $request, $id)
     {
-        $notification = DatabaseNotification::findOrFail($id);
-
-        $this->authorize('update', $notification);
+        $notification = $request->user()
+            ->notifications()
+            ->findOrFail($id);
 
         $notification->markAsRead();
 
-        return redirect()
-            ->route('notifications.index');
+        return redirect()->route('notifications.index')
+            ->with('success', '既読にしました');
     }
 }
