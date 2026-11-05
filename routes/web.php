@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/reading-plans/create', [ReadingPlanController::class, 'create'])->name('reading-plans.create');
     Route::post('/reading-plans', [ReadingPlanController::class, 'store'])->name('reading-plans.store');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'read'])->name('notifications.read');
 });
 
 Route::get('/', [BookController::class, 'index'])->name('books.index');
