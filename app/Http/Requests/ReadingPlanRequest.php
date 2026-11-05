@@ -46,8 +46,7 @@ class ReadingPlanRequest extends FormRequest
             ],
             'target_date' => [
                 'required',
-                'date',
-                'date_format:Y/m/d',
+                'date_format:Y-m-d',
                 'after_or_equal:today',
             ],
         ];
@@ -58,8 +57,7 @@ class ReadingPlanRequest extends FormRequest
         return [
             'target_date' => [
                 'required',
-                'date',
-                'date_format:Y/m/d',
+                'date_format:Y-m-d',
                 'after_or_equal:today',
             ],
         ];
@@ -72,8 +70,7 @@ class ReadingPlanRequest extends FormRequest
             'book_id.exists' => '選択された書籍は存在しません。',
             'book_id.unique' => 'この書籍はすでに読書計画に登録されています。',
             'target_date.required' => '目標期日を入力してください。',
-            'target_date.date' => '正しい日付の形式で入力してください。',
-            'target_date.date_format' => '日付は「YYYY/MM/DD」の形式で入力してください。',
+            'target_date.date_format' => '正しい日付の形式で入力してください。',
             'target_date.after_or_equal' => '目標期日には今日以降の日付を指定してください。',
         ];
     }

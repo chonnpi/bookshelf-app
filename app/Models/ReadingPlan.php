@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\ReadingPlanStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +21,7 @@ class ReadingPlan extends Model
     ];
 
     protected $casts = [
+        'status' => ReadingPlanStatus::class,
         'target_date' => 'date',
         'completed_at' => 'datetime',
     ];
@@ -31,5 +34,20 @@ class ReadingPlan extends Model
     public function book(): BelongsTo
     {
         return $this->belongsTo(Book::class);
+    }
+
+    public function scopeUnread(Builder $query): Builder
+    {
+        return $query->where('status', ReadingPlanStatus::Unread);
+    }
+
+    public function scopeReading(Builder $query): Builder
+    {
+        return $query->where('status', ReadingPlanStatus::Reading);
+    }
+
+    public function scopeCompleted(Builder $query): Builder
+    {
+        return $query->where('status', ReadingPlanStatus::Completed);
     }
 }

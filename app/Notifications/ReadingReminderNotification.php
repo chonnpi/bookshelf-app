@@ -4,20 +4,24 @@ namespace App\Notifications;
 
 use App\Models\ReadingPlan;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
-class ReadingReminder extends Notification
+class ReadingReminderNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
     protected $readingPlan;
 
+    protected $timing;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct(ReadingPlan $readingPlan)
+    public function __construct(ReadingPlan $readingPlan, string $timing)
     {
         $this->readingPlan = $readingPlan;
+        $this->timing = $timing;
     }
 
     public function via(object $notifiable): array
@@ -30,7 +34,8 @@ class ReadingReminder extends Notification
         return [
             'reading_plan_id' => $this->readingPlan->id,
             'book_title' => $this->readingPlan->book->title,
-            'message' => "「{$this->readingPlan->book->title}」の読書期限まであと3日です！",
+            'target_date' => $this->readingPlan->target_date,
+            'message' => "「{$this->readingPlan->book->title}」の読書期限まであと3日です!",
         ];
     }
 }

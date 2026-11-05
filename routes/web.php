@@ -4,7 +4,9 @@ use App\Http\Controllers\BookController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\GenreController;
 use App\Http\Controllers\MyReadingReportController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RankingController;
+use App\Http\Controllers\ReadingPlanController;
 use App\Http\Controllers\ReviewController;
 use GuzzleHttp\Middleware;
 use Illuminate\Support\Facades\Route;
@@ -42,8 +44,14 @@ Route::middleware('auth')->group(function () {
     Route::put('/genres/{genre}', [GenreController::class, 'update'])->name('genres.update');
     Route::delete('/genres/{genre}', [GenreController::class, 'destroy'])->name('genres.destroy');
     Route::get('/reports', [MyReadingReportController::class, 'index'])->name('reports.index');
-    Route::get('/reading-plans/create', [ReadingPlanControler::class, 'index'])->name('reading-plans.index');
-    Route::get('/notifications', [NotificationControler::class, 'index'])->name('notifications.index');
+    Route::get('/reading-plans', [ReadingPlanController::class, 'index'])->name('reading-plans.index');
+    Route::post('/reading-plans/{readingPlan}/complete', [ReadingPlanController::class, 'complete'])->name('reading-plans.complete');
+    Route::get('/reading-plans/{readingPlan}/edit', [ReadingPlanController::class, 'edit'])->name('reading-plans.edit');
+    Route::put('/reading-plans/{readingPlan}', [ReadingPlanController::class, 'update'])->name('reading-plans.update');
+    Route::delete('/reading-plans/{readingPlan}', [ReadingPlanController::class, 'destroy'])->name('reading-plans.destroy');
+    Route::get('/reading-plans/create', [ReadingPlanController::class, 'create'])->name('reading-plans.create');
+    Route::post('/reading-plans', [ReadingPlanController::class, 'store'])->name('reading-plans.store');
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
 });
 
 Route::get('/', [BookController::class, 'index'])->name('books.index');
