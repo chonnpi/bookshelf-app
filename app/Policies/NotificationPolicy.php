@@ -2,14 +2,13 @@
 
 namespace App\Policies;
 
-use Illuminate\Notifications\DatabaseNotification;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
+use Illuminate\Notifications\DatabaseNotification;
 
 class NotificationPolicy
 {
     public function update(User $user, DatabaseNotification $notification): bool
     {
-        return (int) $user->id === (int) $notification->notifiable_id;
+        return (string) $notification->notifiable_id === (string) $user->id;
     }
 }

@@ -4,26 +4,57 @@ namespace Tests\Feature;
 
 use App\Models\Book;
 use App\Models\Genre;
+use App\Models\Review;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class BookControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_index_displays_paginated_books_with_genres(): void
+    public function test_index_displays_paginated_books_with_genres_and_handles_search_and_sort(): void
     {
-        $genre = Genre::factory()->create();
-        $book = Book::factory()->hasAttached($genre)->create();
+        $genreA = Genre::factory()->create();
+        $genreB = Genre::factory()->create();
+
+        $oldBook = Book::factory()->create(['title' => 'C_Book_Old', 'author' => '山田太郎', 'created_at' => now()->subDays(2)]);
+        $newBook = Book::factory()->create(['title' => 'A_Book_New', 'author' => '佐藤次郎', 'created_at' => now()]);
+        $midBook = Book::factory()->create(['title' => 'B_Book_Mid', 'author' => '鈴木三郎', 'created_at' => now()->subDay()]);
+
+        $oldBook->genres()->attach($genreA);
+        $newBook->genres()->attach($genreB);
+
+        Review::factory()->create(['book_id' => $newBook->id, 'rating' => 5]);
+        Review::factory()->create(['book_id' => $midBook->id, 'rating' => 3]);
 
         $response = $this->get(route('books.index'));
+        $response->assertOk()
+            ->assertViewIs('books.index')
+            ->assertViewHas('books')
+            ->assertViewHas('genres');
 
-        $response->assertOk();
-        $response->assertViewIs('books.index');
-        $response->assertViewHas('books');
-        $response->assertSee($book->title);
-        $response->assertSee($genre->name);
+        $response = $this->get(route('books.index', ['keyword' => 'Laravel']));
+        $response->assertDontSee('C_Book_Old');
+
+        $response = $this->get(route('books.index', ['keyword' => '山田']));
+        $response->assertSee('C_Book_Old')->assertDontSee('A_Book_New');
+
+        $response = $this->get(route('books.index', ['genre' => $genreA->id]));
+        $response->assertSee('C_Book_Old')->assertDontSee('A_Book_New');
+
+        $response = $this->get(route('books.index'));
+        $this->assertEquals([$newBook->id, $midBook->id, $oldBook->id], $response->viewData('books')->pluck('id')->toArray());
+
+        $response = $this->get(route('books.index', ['sort' => 'oldest']));
+        $this->assertEquals([$oldBook->id, $midBook->id, $newBook->id], $response->viewData('books')->pluck('id')->toArray());
+
+        $response = $this->get(route('books.index', ['sort' => 'title']));
+        $this->assertEquals(['A_Book_New', 'B_Book_Mid', 'C_Book_Old'], $response->viewData('books')->pluck('title')->toArray());
+
+        $response = $this->get(route('books.index', ['sort' => 'rating']));
+        $this->assertEquals([$newBook->id, $midBook->id, $oldBook->id], $response->viewData('books')->pluck('id')->toArray());
     }
 
     public function test_create_returns_view_with_genres_for_authenticated_user(): void
@@ -42,6 +73,83 @@ class BookControllerTest extends TestCase
     {
         $response = $this->get(route('books.create'));
         $response->assertRedirect(route('login'));
+    }
+
+    public function test_fetch_by_isbn_returns_formatted_data_on_success(): void
+    {
+        $user = User::factory()->create();
+        $isbn = '9784798157573';
+
+        config([
+            'services.google.books_api_url' => 'https://googleapis.com',
+            'services.google.books_api_key' => 'fake-key',
+        ]);
+
+        Http::fake([
+            'https://googleapis.com/volumes*' => Http::response([
+                'items' => [
+                    [
+                        'volumeInfo' => [
+                            'title' => 'テスト駆動開発',
+                            'authors' => ['Kent Beck', '和田 卓人'],
+                            'description' => 'TDDの解説書。',
+                            'publishedDate' => '2017-10-24',
+                            'imageLinks' => [
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->actingAs($user)->getJson("/books/isbn/{$isbn}");
+        $response->assertStatus(200)
+            ->assertJson([
+                'title' => 'テスト駆動開発',
+                'author' => 'Kent Beck, 和田 卓人',
+                'published_date' => '2017-10-24',
+            ]);
+    }
+
+    public function test_fetch_by_isbn_handles_incomplete_published_date(): void
+    {
+        $user = User::factory()->create();
+        $isbn = '9784798157573';
+
+        config([
+            'services.google.books_api_url' => 'https://googleapis.com',
+            'services.google.books_api_key' => 'fake-key',
+        ]);
+
+        Http::fake([
+            'https://googleapis.com/volumes*' => Http::response([
+                'items' => [
+                    [
+                        'volumeInfo' => [
+                            'title' => '古い書籍',
+                            'publishedDate' => '2017',
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->actingAs($user)->getJson("/books/isbn/{$isbn}");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'title' => '古い書籍',
+                'published_date' => '',
+            ]);
+    }
+
+    public function test_fetch_by_isbn_fails_validation_if_not_13_digits(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->getJson('/books/isbn/123456789012')
+            ->assertStatus(400)
+            ->assertJson(['error' => '正しい13桁のISBNコードを入力してください。']);
     }
 
     public function test_store_saves_book_and_syncs_genres(): void

@@ -7,6 +7,9 @@
 ユーザーが書籍に対して評価やコメントを残し、読書体験を共有・管理することを目的としています。
 主要な機能として、ジャンルによる書籍の分類、レビューへのいいね機能、平均評価に基づくランキング機能を備えています。また、外部アプリケーション向けに書籍データの操作が可能な、認証不要の公開API（JSON）も提供します。
 
+応用
+書籍一覧画面でキーワード・ジャンル・並び順を組み合わせた高度な検索できます。また、Google Books API連携を利用した書籍登録や、マイ読書レポートの作成、公開APIのSanctum認証と認可、読書計画の作成と通知を提供します。
+
 ## ER図
 
 ```mermaid
@@ -33,7 +36,7 @@ erDiagram
     books ||--o{ reading_plans : "1対多 (対象書籍)"
 
     users ||--o{ notifications : "1対多 (通知受信)"
-    reading_plans ||--o| notifications : "1対1 (3日前リマインダー)"
+    reading_plans ||--o{ notifications : "1対多 (計画に関連する通知)"
 
 users {
         bigint_unsigned id PK
@@ -101,6 +104,53 @@ text comment "NULLABLE"
         timestamp created_at
         timestamp updated_at
         string composite_key "UNIQUE(book_id, user_id)"
+    }
+
+応用
+users {
+        bigint id PK
+        varchar_255 name
+        varchar_255 email "UNIQUE"
+        timestamp email_verified_at "NULLABLE"
+        varchar_255 password
+        varchar_100 remember_token "NULLABLE"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    books {
+        bigint id PK
+        bigint user_id FK "users.id (cascadeOnDelete)"
+        varchar_255 title
+        varchar_100 author "NULLABLE"
+        varchar_255 isbn "UNIQUE"
+        date published_date "NULLABLE"
+        text description "NULLABLE"
+        varchar_2048 image_url "NULLABLE"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+reading_plans {
+        bigint id PK
+        bigint user_id FK "users.id (cascadeOnDelete)"
+        bigint book_id FK "books.id (cascadeOnDelete)"
+        date target_date
+        varchar_30 status "default: in_progress"
+        timestamp completed_at "NULLABLE"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    notifications {
+        uuid id PK
+        varchar_255 type
+        varchar_255 notifiable_type
+        bigint_unsigned notifiable_id
+        text data
+        timestamp read_at "NULLABLE"
+        timestamp created_at
+        timestamp updated_at
     }
 ```
 
